@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style/style.css">
+    <title>PDF Processor</title>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Processor</h1>
+        <p class="subtitle">Faça upload do seu PDF e receba uma planilha processada</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Clique ou arraste seu PDF aqui</div>
+            <div class="upload-subtext">Apenas arquivos PDF são aceitos</div>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".pdf" />
+        
+        <div class="file-info" id="fileInfo">
+            <span>📄</span>
+            <span id="fileName"></span>
+        </div>
+        
+        <button class="btn" id="uploadBtn" disabled>
+            Processar PDF
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>Processando seu arquivo...</span>
+        </div>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script src="/main/main.js"></script>
+</body>
+</html>
