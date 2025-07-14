@@ -1,17 +1,14 @@
 {
-  "functions": {},
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static"
+    }
+  ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/frontend/index.html"
-    },
-    {
-      "src": "/style/(.*)",
-      "dest": "/frontend/style/$1"
-    },
-    {
-      "src": "/main/(.*)",
-      "dest": "/frontend/main/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
