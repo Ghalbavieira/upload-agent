@@ -1,4 +1,6 @@
-flask
-camelot-py[cv]
-pandas
-openpyxl
+Flask==2.3.3
+Flask-CORS==4.0.0
+pandas==2.0.3
+openpyxl==3.1.2
+PyPDF2==3.0.1
+gunicorn==21.2.0

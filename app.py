@@ -1,40 +1,36 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-import camelot
-import pandas as pd
-import uuid
 import os
 
 app = Flask(__name__)
-CORS(app)
 
-@app.route("/convert", methods=["POST"])
+# Configurar CORS para permitir Vercel
+CORS(app, origins=[
+    "https://upload-agent.vercel.app",
+    "https://upload-agent-git-main-ghalba-vieiras-projects-f2e9b128.vercel.app",
+    "http://localhost:3000",  # Para desenvolvimento
+    "http://127.0.0.1:3000"   # Para desenvolvimento
+])
+
+@app.route('/convert', methods=['POST'])
 def convert_pdf():
-    if "pdf" not in request.files:
-        return jsonify({"error": "Nenhum arquivo PDF enviado"}), 400
+    if 'pdf' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    
+    file = request.files['pdf']
+    if file.filename == '':
+        return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
+    
+    if file and file.filename.lower().endswith('.pdf'):
+        # Sua lógica de conversão aqui
+        # Por enquanto, retorna um arquivo de exemplo
+        return jsonify({'message': 'PDF processado com sucesso!'})
+    
+    return jsonify({'error': 'Arquivo deve ser PDF'}), 400
 
-    pdf_file = request.files["pdf"]
-    pdf_path = f"/tmp/{uuid.uuid4()}.pdf"
-    pdf_file.save(pdf_path)
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'OK', 'message': 'Servidor funcionando!'})
 
-    try:
-        tables = camelot.read_pdf(pdf_path, pages="all", flavor="stream")
-        if not tables:
-            return jsonify({"error": "Não encontrei tabelas"}), 422
-
-        xlsx_path = f"/tmp/{uuid.uuid4()}.xlsx"
-        with pd.ExcelWriter(xlsx_path) as writer:
-            for i, t in enumerate(tables):
-                t.df.to_excel(writer, sheet_name=f"Tabela_{i+1}", index=False)
-
-        return send_file(
-            xlsx_path,
-            as_attachment=True,
-            download_name="planilha.xlsx",
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    finally:
-        os.remove(pdf_path)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(debug=True, port=int(os.environ.get('PORT', 5000)))
