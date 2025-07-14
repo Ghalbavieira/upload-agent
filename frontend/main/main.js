@@ -9,8 +9,7 @@ uploadBtn.addEventListener('click', async () => {
         const fd = new FormData();
         fd.append('pdf', selectedFile);
 
-        // Troque esta URL pela sua (ex: render, fly.io ou localhost)
-        const BACKEND_URL = 'https://seu-backend.onrender.com/convert';
+        const BACKEND_URL = 'https://upload-agent.onrender.com/convert';
 
         const res = await fetch(BACKEND_URL, {
             method: 'POST',
