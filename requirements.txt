@@ -1,0 +1,4 @@
+flask
+camelot-py[cv]
+pandas
+openpyxl
