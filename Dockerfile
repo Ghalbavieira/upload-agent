@@ -1,18 +1,25 @@
-FROM python:3.11-slim
+FROM python:3.10
 
 # Instala dependências do sistema
-RUN apt-get update && \
-    apt-get install -y ghostscript python3-tk poppler-utils && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    ghostscript \
+    python3-tk \
+    python3-opencv \
+    libgl1 \
+    libglib2.0-0 \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Cria diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos do projeto
+# Copia dependências Python e instala
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-COPY app.py .
+# Copia o restante do código
+COPY . .
 
-# Comando para rodar
+# Roda o app
 CMD ["python", "app.py"]
