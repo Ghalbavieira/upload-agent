@@ -7,3 +7,4 @@ Flask-CORS==4.0.0
 gunicorn==21.2.0
 camelot-py[cv]
 opencv-python-headless
+pdf2image==1.16.3
