@@ -24,7 +24,7 @@ import fitz  # PyMuPDF
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-CCORS(app, origins=[
+CORS(app, origins=[
     "https://upload-agent.vercel.app",
     "https://upload-agent-git-main-ghalba-vieiras-projects-f2e9b128.vercel.app",
     "http://localhost:3000",
