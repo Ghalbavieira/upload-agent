@@ -489,93 +489,60 @@ def convert_to_word():
         # Extrair tabelas
         tables = extract_tables_from_pdf(pdf_path)
         
-        if not text.strip() and not images_text and not tables:
+        if not text.strip() and not tables:
             return jsonify({
-                "error": "Não foi possível extrair conteúdo do PDF",
-                "details": "O PDF pode estar protegido ou não conter texto extraível"
+                "error": "Nenhum conteúdo extraível encontrado",
+                "details": "O PDF pode estar protegido, corrompido ou não conter texto extraível"
             }), 422
         
-        # Criar documento Word
         doc = Document()
+        doc.add_heading('Documento convertido de PDF', level=1)
         
-        # Título
-        title = doc.add_heading('Documento Convertido do PDF', 0)
-        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Metadados
-        doc.add_paragraph(f"Arquivo original: {pdf_file.filename}")
-        doc.add_paragraph(f"Convertido em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-        doc.add_paragraph("")
-        
-        # Adicionar texto principal
         if text.strip():
-            doc.add_heading('Conteúdo Principal', level=1)
-            paragraphs = text.split('\n\n')
-            for paragraph in paragraphs:
-                if paragraph.strip():
-                    cleaned_paragraph = paragraph.strip().replace('\n', ' ')
-                    doc.add_paragraph(cleaned_paragraph)
+            p = doc.add_paragraph(text)
         
-        # Adicionar texto de imagens
         if images_text:
-            doc.add_heading('Texto Extraído de Imagens', level=1)
-            image_paragraphs = images_text.split('\n\n')
-            for paragraph in image_paragraphs:
-                if paragraph.strip():
-                    cleaned_paragraph = paragraph.strip().replace('\n', ' ')
-                    doc.add_paragraph(cleaned_paragraph)
+            doc.add_page_break()
+            doc.add_heading("Texto extraído de imagens", level=2)
+            p_img = doc.add_paragraph(images_text)
         
-        # Adicionar tabelas
+        # Adicionar tabelas ao Word
         if tables:
-            doc.add_heading('Tabelas Extraídas', level=1)
+            doc.add_page_break()
+            doc.add_heading("Tabelas extraídas", level=2)
             
-            for i, table in enumerate(tables):
-                doc.add_heading(f'Tabela {i+1}', level=2)
-                
+            for table in tables:
                 df = table.df.copy()
                 df = df.dropna(how='all', axis=0)
                 df = df.dropna(how='all', axis=1)
-                df = df.fillna('')
                 
-                # Limpar dados
-                df = df.applymap(lambda x: str(x).strip() if pd.notna(x) else '')
+                if df.empty:
+                    continue
                 
-                if not df.empty:
-                    try:
-                        # Criar tabela no Word
-                        word_table = doc.add_table(rows=len(df) + 1, cols=len(df.columns))
-                        word_table.style = 'Table Grid'
-                        
-                        # Adicionar cabeçalhos
-                        for j, column in enumerate(df.columns):
-                            cell = word_table.cell(0, j)
-                            cell.text = str(column) if column else f"Coluna {j+1}"
-                            cell.paragraphs[0].runs[0].bold = True
-                        
-                        # Adicionar dados
-                        for row_idx, (_, row) in enumerate(df.iterrows()):
-                            for col_idx, value in enumerate(row):
-                                cell = word_table.cell(row_idx + 1, col_idx)
-                                cell.text = str(value) if pd.notna(value) else ""
-                    except Exception as e:
-                        logging.warning(f"Erro ao criar tabela {i+1}: {e}")
-                        doc.add_paragraph(f"[Erro ao processar tabela {i+1}]")
+                table_word = doc.add_table(rows=1, cols=len(df.columns))
+                hdr_cells = table_word.rows[0].cells
+                for i, col_name in enumerate(df.columns):
+                    hdr_cells[i].text = str(col_name)
                 
-                doc.add_paragraph("")
+                for _, row in df.iterrows():
+                    row_cells = table_word.add_row().cells
+                    for i, cell_val in enumerate(row):
+                        row_cells[i].text = str(cell_val)
+                
+                doc.add_paragraph()
         
-        # Salvar documento
         docx_path = f"/tmp/{uuid.uuid4()}.docx"
         doc.save(docx_path)
         
         return send_file(
             docx_path,
             as_attachment=True,
-            download_name=f"documento_{filename.replace('.pdf', '')}.docx",
+            download_name=f"{filename.replace('.pdf', '')}.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-        
+    
     except Exception as e:
-        logging.error(f"Erro na conversão para Word: {str(e)}")
+        logging.error(f"Erro na conversão Word: {str(e)}")
         return jsonify({
             "error": "Erro interno do servidor",
             "details": str(e)
@@ -590,9 +557,8 @@ def convert_to_word():
         except Exception as e:
             logging.warning(f"Erro na limpeza: {e}")
 
-#power point precisa de atualizacao
-@app.route("/convert/powerpoint", methods=["POST"])
-def convert_to_powerpoint():
+@app.route("/convert/pptx", methods=["POST"])
+def convert_to_pptx():
     """Conversão para PowerPoint"""
     pdf_path = None
     pptx_path = None
@@ -612,132 +578,72 @@ def convert_to_powerpoint():
         
         logging.info(f"Convertendo para PowerPoint: {pdf_path}")
         
-        # Extrair texto do PDF
+        # Extrair texto
         text = extract_text_from_pdf(pdf_path)
-        
-        if not text.strip():
-            return jsonify({
-                "error": "Não foi possível extrair texto do PDF",
-                "details": "O PDF pode estar protegido ou não conter texto extraível"
-            }), 422
         
         # Extrair tabelas
         tables = extract_tables_from_pdf(pdf_path)
         
-        # Criar apresentação PowerPoint
         prs = Presentation()
+        blank_slide_layout = prs.slide_layouts[6]
         
-        # Slide de título
-        slide_layout = prs.slide_layouts[0]  # Title slide
-        slide = prs.slides.add_slide(slide_layout)
-        title = slide.shapes.title
-        subtitle = slide.placeholders[1]
-        
-        title.text = "Apresentação Convertida do PDF"
-        subtitle.text = f"Arquivo: {pdf_file.filename}\nConvertido em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-        
-        # Dividir texto em slides
+        # Slide texto
         if text.strip():
-            paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+            slide = prs.slides.add_slide(blank_slide_layout)
+            shapes = slide.shapes
+            txBox = shapes.add_textbox(PptxInches(1), PptxInches(1), PptxInches(8), PptxInches(5))
+            tf = txBox.text_frame
+            tf.word_wrap = True
+            tf.text = text[:3000]  # Limite de caracteres por slide
             
-            # Agrupar parágrafos em slides (máximo 5 por slide)
-            slide_groups = []
-            current_group = []
-            
-            for paragraph in paragraphs[:20]:  # Limitar a 20 parágrafos
-                if len(current_group) < 5:
-                    current_group.append(paragraph)
-                else:
-                    slide_groups.append(current_group)
-                    current_group = [paragraph]
-            
-            if current_group:
-                slide_groups.append(current_group)
-            
-            # Criar slides de conteúdo
-            for i, group in enumerate(slide_groups):
-                slide_layout = prs.slide_layouts[1]  # Title and Content
-                slide = prs.slides.add_slide(slide_layout)
-                
-                title = slide.shapes.title
-                content = slide.placeholders[1]
-                
-                title.text = f"Conteúdo - Página {i+1}"
-                
-                # Adicionar texto ao slide
-                text_frame = content.text_frame
-                text_frame.clear()
-                
-                for j, paragraph in enumerate(group):
-                    if j == 0:
-                        p = text_frame.paragraphs[0]
-                    else:
-                        p = text_frame.add_paragraph()
-                    
-                    p.text = paragraph[:200] + "..." if len(paragraph) > 200 else paragraph
-                    p.level = 0
+            # Se texto longo, dividir em slides adicionais
+            remaining_text = text[3000:]
+            while remaining_text:
+                slide = prs.slides.add_slide(blank_slide_layout)
+                shapes = slide.shapes
+                txBox = shapes.add_textbox(PptxInches(1), PptxInches(1), PptxInches(8), PptxInches(5))
+                tf = txBox.text_frame
+                tf.word_wrap = True
+                tf.text = remaining_text[:3000]
+                remaining_text = remaining_text[3000:]
         
-        # Adicionar tabelas em slides separados
-        if tables:
-            for i, table in enumerate(tables):
-                slide_layout = prs.slide_layouts[1]  # Title and Content
-                slide = prs.slides.add_slide(slide_layout)
-                
-                title = slide.shapes.title
-                title.text = f"Tabela {i+1}"
-                
-                df = table.df.copy()
-                df = df.dropna(how='all')
-                df = df.fillna('')
-                
-                if not df.empty:
-                    # Limitar tamanho da tabela para caber no slide
-                    max_rows = min(10, len(df))
-                    max_cols = min(6, len(df.columns))
-                    
-                    df_limited = df.iloc[:max_rows, :max_cols]
-                    
-                    # Adicionar tabela ao slide
-                    left = PptxInches(1)
-                    top = PptxInches(2)
-                    width = PptxInches(8)
-                    height = PptxInches(4)
-                    
-                    table_shape = slide.shapes.add_table(
-                        rows=len(df_limited) + 1,
-                        cols=len(df_limited.columns),
-                        left=left,
-                        top=top,
-                        width=width,
-                        height=height
-                    )
-                    
-                    table_obj = table_shape.table
-                    
-                    # Adicionar cabeçalhos
-                    for j, column in enumerate(df_limited.columns):
-                        cell = table_obj.cell(0, j)
-                        cell.text = str(column) if column else f"Col {j+1}"
-                    
-                    # Adicionar dados
-                    for i, row in df_limited.iterrows():
-                        for j, value in enumerate(row):
-                            cell = table_obj.cell(i + 1, j)
-                            cell.text = str(value)[:50] if pd.notna(value) else ""
+        # Slides tabelas
+        for table in tables:
+            df = table.df.copy()
+            df = df.dropna(how='all', axis=0)
+            df = df.dropna(how='all', axis=1)
+            
+            if df.empty:
+                continue
+            
+            slide = prs.slides.add_slide(blank_slide_layout)
+            shapes = slide.shapes
+            
+            rows, cols = df.shape
+            table_shape = shapes.add_table(rows+1, cols, PptxInches(0.5), PptxInches(0.5), PptxInches(9), PptxInches(5)).table
+            
+            # Cabeçalhos
+            for col_idx, col_name in enumerate(df.columns):
+                table_shape.cell(0, col_idx).text = str(col_name)
+            
+            # Dados
+            for row_idx in range(rows):
+                for col_idx in range(cols):
+                    val = df.iat[row_idx, col_idx]
+                    table_shape.cell(row_idx+1, col_idx).text = str(val)
         
-        # Salvar apresentação
         pptx_path = f"/tmp/{uuid.uuid4()}.pptx"
         prs.save(pptx_path)
         
         return send_file(
             pptx_path,
             as_attachment=True,
-            download_name="apresentacao_convertida.pptx",
+            download_name=f"{filename.replace('.pdf', '')}.pptx",
             mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation"
         )
-        
+    
     except Exception as e:
-        logging.error(f"Erro na conversão para PowerPoint: {str(e)}")
+        logging.error(f"Erro na conversão PPTX: {str(e)}")
         return jsonify({
             "error": "Erro interno do servidor",
             "details": str(e)
@@ -752,75 +658,5 @@ def convert_to_powerpoint():
         except Exception as e:
             logging.warning(f"Erro na limpeza: {e}")
 
-@app.route("/convert/summary", methods=["POST"])
-def generate_summary():
-    """Extrai texto do PDF para ser usado no frontend"""
-    pdf_path = None
-    
-    try:
-        if "file" not in request.files:
-            return jsonify({"error": "Nenhum arquivo PDF enviado"}), 400
-        
-        pdf_file = request.files["file"]
-        
-        if pdf_file.filename == '':
-            return jsonify({"error": "Nenhum arquivo selecionado"}), 400
-        
-        filename = secure_filename(pdf_file.filename)
-        pdf_path = f"/tmp/{uuid.uuid4()}_{filename}"
-        pdf_file.save(pdf_path)
-        
-        logging.info(f"Extraindo texto para resumo: {pdf_path}")
-        
-        # Extrair texto do PDF
-        text = extract_text_from_pdf(pdf_path)
-        
-        if not text.strip():
-            return jsonify({
-                "error": "Não foi possível extrair texto do PDF",
-                "details": "O PDF pode estar protegido ou não conter texto extraível"
-            }), 422
-        
-        # Retornar texto extraído para o frontend processar
-        return jsonify({
-            "filename": secure_filename(pdf_file.filename),
-            "summary": text or "Resumo não disponível.", 
-            "extracted_at": datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        logging.error(f"Erro na extração de texto: {str(e)}")
-        return jsonify({
-            "error": "Erro interno do servidor",
-            "details": str(e)
-        }), 500
-    
-    finally:
-        try:
-            if pdf_path and os.path.exists(pdf_path):
-                os.remove(pdf_path)
-        except Exception as e:
-            logging.warning(f"Erro na limpeza: {e}")
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "services": {
-            "pdf_processing": "active",
-            "text_extraction": "active",
-            "table_extraction": "active"
-        }
-    })
-
-# Manter o endpoint original para compatibilidade
-@app.route("/convert", methods=["POST"])
-def convert_pdf():
-    """Endpoint original mantido para compatibilidade"""
-    return convert_to_excel()
-
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(debug=True, host="0.0.0.0", port=5000)
