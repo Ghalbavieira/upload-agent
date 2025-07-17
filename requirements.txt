@@ -1,11 +1,37 @@
-numpy==1.24.4
-pandas==1.5.3
-openpyxl==3.1.2
-PyPDF2==3.0.1
-Flask==2.3.3
+# Core Flask dependencies
+Flask==2.3.2
 Flask-CORS==4.0.0
-gunicorn==21.2.0
-camelot-py[cv]
-opencv-python-headless
+
+# PDF processing
+camelot-py[cv]==0.11.0
+PyPDF2==3.0.1
+PyMuPDF==1.23.3
+
+# Table processing
+pandas==2.0.3
+openpyxl==3.1.2
+
+# OCR and image processing
 pdf2image==1.16.3
 pytesseract==0.3.10
+Pillow==10.0.0
+opencv-python==4.8.0.74
+numpy==1.24.3
+
+# Word document generation
+python-docx==0.8.11
+
+# PowerPoint generation
+python-pptx==0.6.21
+
+# HTTP requests for n8n integration
+requests==2.31.0
+
+# File handling
+Werkzeug==2.3.6
+
+# Logging and utilities
+uuid
+
+# System dependencies (for deployment)
+gunicorn==21.2.0
