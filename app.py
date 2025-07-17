@@ -565,11 +565,8 @@ def generate_summary():
         
         # Retornar texto extraído para o frontend processar
         return jsonify({
-            "success": True,
-            "text": text,
-            "filename": pdf_file.filename,
-            "word_count": len(text.split()),
-            "char_count": len(text),
+            "filename": secure_filename(pdf_file.filename),
+            "summary": summary or "Resumo não disponível.",
             "extracted_at": datetime.now().isoformat()
         })
         
